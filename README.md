@@ -40,7 +40,7 @@ Then just add these app settings to your web.config file and edit the values acc
     <add key="ImageResizePreviewSuffix" value="" />
     ```
   - ### What happens to the original image?
-    It's completely up to you. If you don't want to keep it you can set this value to true, otherwise set it to false.
+    It's completely up to you. If you don't want to keep it you can set this value to false, otherwise set it to true.
     
     ```xml
     <add key="ImageResizeKeepOriginal" value="false" />
