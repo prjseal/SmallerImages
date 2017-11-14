@@ -1,6 +1,6 @@
 version: 1.0.{build}
 before_build:
-- ps: nuget restore SmallerImages.csproj
+- ps: nuget restore SmallerImages.sln
 build:
   publish_nuget: true
   verbosity: minimal
