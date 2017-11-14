@@ -1,10 +1,10 @@
-SmallerImages/bin/Debug/$RANDOM_SEED$
+bin/Debug/$RANDOM_SEED$
 *.suo
-SmallerImages/bin/Debug/$RANDOM_SEED$
+bin/Debug/$RANDOM_SEED$
 *.suo
 /.vs
-/SmallerImages/obj
-/SmallerImages/bin/Debug
-/SmallerImages/App_Data/NuGetBackup
-/SmallerImages/bin/Release
-/SmallerImages/packages
+/obj
+/bin/Debug
+/App_Data/NuGetBackup
+/bin/Release
+/packages
