@@ -5,3 +5,6 @@ SmallerImages/bin/Debug/$RANDOM_SEED$
 /.vs
 /SmallerImages/obj
 /SmallerImages/bin/Debug
+/SmallerImages/App_Data/NuGetBackup
+/SmallerImages/bin/Release
+/SmallerImages/packages
