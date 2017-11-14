@@ -1,0 +1,7 @@
+SmallerImages/bin/Debug/$RANDOM_SEED$
+*.suo
+SmallerImages/bin/Debug/$RANDOM_SEED$
+*.suo
+/.vs
+/SmallerImages/obj
+/SmallerImages/bin/Debug
