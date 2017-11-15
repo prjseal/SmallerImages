@@ -54,22 +54,25 @@ namespace SmallerImages
                     if (isNew || applyToExistingImages)
                     {
                         string serverFilePath = GetServerFilePath(mediaItem, isNew);
-                        double currentWidth = int.Parse(mediaItem.Properties["umbracoWidth"].Value.ToString());
-                        double currentHeight = int.Parse(mediaItem.Properties["umbracoHeight"].Value.ToString());
-                        Tuple<int, int> imageSize = GetCorrectWidthAndHeight(resizeWidth, resizeHeight, maintainRatio, currentWidth, currentHeight);
-                        bool isDesiredSize = (currentWidth == imageSize.Item1) && (currentHeight == imageSize.Item2);
-                        bool isLargeEnough = currentWidth >= imageSize.Item1 && currentHeight >= imageSize.Item2;
-
-                        if (!isDesiredSize && (isLargeEnough || upscale))
+                        if (serverFilePath != null)
                         {
-                            if (CreateCroppedVersionOfTheFile(imageSize.Item1, imageSize.Item2, fileNameSuffix, keepOriginal, serverFilePath))
+                            double currentWidth = int.Parse(mediaItem.Properties["umbracoWidth"].Value.ToString());
+                            double currentHeight = int.Parse(mediaItem.Properties["umbracoHeight"].Value.ToString());
+                            Tuple<int, int> imageSize = GetCorrectWidthAndHeight(resizeWidth, resizeHeight, maintainRatio, currentWidth, currentHeight);
+                            bool isDesiredSize = (currentWidth == imageSize.Item1) && (currentHeight == imageSize.Item2);
+                            bool isLargeEnough = currentWidth >= imageSize.Item1 && currentHeight >= imageSize.Item2;
+
+                            if (!isDesiredSize && (isLargeEnough || upscale))
                             {
-                                mediaItem.SetValue("umbracoWidth", imageSize.Item1);
-                                mediaItem.SetValue("umbracoHeight", imageSize.Item2);
-                                sender.Save(mediaItem);
+                                if (CreateCroppedVersionOfTheFile(imageSize.Item1, imageSize.Item2, fileNameSuffix, keepOriginal, serverFilePath))
+                                {
+                                    mediaItem.SetValue("umbracoWidth", imageSize.Item1);
+                                    mediaItem.SetValue("umbracoHeight", imageSize.Item2);
+                                    sender.Save(mediaItem);
+                                }
                             }
+                            CreateCroppedVersionOfTheFile(previewWidth, previewHeight, previewFileNameSuffix, true, serverFilePath);
                         }
-                        CreateCroppedVersionOfTheFile(previewWidth, previewHeight, previewFileNameSuffix, true, serverFilePath);
                     }
                 }
             }
@@ -118,11 +121,18 @@ namespace SmallerImages
         private static string GetServerFilePath(IMedia mediaItem, bool isNew)
         {
             string filePath = (string)mediaItem.Properties["umbracoFile"].Value;
-            if (!filePath.StartsWith("/media/"))
+            if (filePath != null)
             {
-                filePath = GetFilePathFromJson(filePath);
+                if (!filePath.StartsWith("/media/"))
+                {
+                    filePath = GetFilePathFromJson(filePath);
+                }
+                return HttpContext.Current.Server.MapPath(filePath);
             }
-            return HttpContext.Current.Server.MapPath(filePath);
+            else
+            {
+                return null;
+            }
         }
 
         /// <summary>

@@ -9,7 +9,7 @@
     <requireLicenseAcceptance>false</requireLicenseAcceptance>
     <description>$description$</description>
     <releaseNotes>
-      - first release with 2 resize option. One main and one preview.
+      - fixed bug where the image is removed and there is no file path
     </releaseNotes>
     <copyright>$copyright$</copyright>
     <tags>SmallerImages</tags>
