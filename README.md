@@ -45,3 +45,6 @@ Then just add these app settings to your web.config file and edit the values acc
     ```xml
     <add key="ImageResizeKeepOriginal" value="false" />
     ```
+## Special Thanks
+
+This project would not exist if it wasn't for [James South](https://github.com/JimBobSquarePants) creating ImageProcessor
