@@ -32,23 +32,23 @@ namespace SmallerImages
         /// <param name="e">Event arguments</param>
         private void MediaService_Saving(IMediaService sender, SaveEventArgs<IMedia> e)
         {
-            int resizeWidth = int.Parse(WebConfigurationManager.AppSettings["ImageResizeWidth"]);
-            int resizeHeight = int.Parse(WebConfigurationManager.AppSettings["ImageResizeHeight"]);
-            string fileNameSuffix = WebConfigurationManager.AppSettings["ImageResizeSuffix"];
+            int resizeWidth = int.Parse(WebConfigurationManager.AppSettings["ImageResizeWidth"] ?? "0");
+            int resizeHeight = int.Parse(WebConfigurationManager.AppSettings["ImageResizeHeight"] ?? "0");
+            string fileNameSuffix = WebConfigurationManager.AppSettings["ImageResizeSuffix"] ?? "";
 
-            int previewWidth = int.Parse(WebConfigurationManager.AppSettings["ImageResizePreviewWidth"]);
-            int previewHeight = int.Parse(WebConfigurationManager.AppSettings["ImageResizePreviewHeight"]);
-            string previewFileNameSuffix = WebConfigurationManager.AppSettings["ImageResizePreviewSuffix"];
+            int previewWidth = int.Parse(WebConfigurationManager.AppSettings["ImageResizePreviewWidth"] ?? "0");
+            int previewHeight = int.Parse(WebConfigurationManager.AppSettings["ImageResizePreviewHeight"] ?? "0");
+            string previewFileNameSuffix = WebConfigurationManager.AppSettings["ImageResizePreviewSuffix"] ?? "";
 
 
-            bool keepOriginal = bool.Parse(WebConfigurationManager.AppSettings["ImageResizeKeepOriginal"]);
-            bool upscale = bool.Parse(WebConfigurationManager.AppSettings["ImageResizeUpscale"]);
-            bool maintainRatio = bool.Parse(WebConfigurationManager.AppSettings["ImageResizeMaintainRatio"]);
-            bool applyToExistingImages = bool.Parse(WebConfigurationManager.AppSettings["ImageResizeApplyToExistingImages"]);
+            bool keepOriginal = bool.Parse(WebConfigurationManager.AppSettings["ImageResizeKeepOriginal"] ?? "false");
+            bool upscale = bool.Parse(WebConfigurationManager.AppSettings["ImageResizeUpscale"] ?? "false");
+            bool maintainRatio = bool.Parse(WebConfigurationManager.AppSettings["ImageResizeMaintainRatio"] ?? "false");
+            bool applyToExistingImages = bool.Parse(WebConfigurationManager.AppSettings["ImageResizeApplyToExistingImages"] ?? "false");
 
             foreach (IMedia mediaItem in e.SavedEntities)
             {
-                if (!string.IsNullOrEmpty(mediaItem.ContentType.Alias) && mediaItem.ContentType.Alias.ToLower() == "image")
+                if (!string.IsNullOrEmpty(mediaItem.ContentType.Alias) && mediaItem.ContentType.Alias.ToLower() == "image" && (resizeWidth > 0 && resizeHeight > 0))
                 {
                     bool isNew = mediaItem.Id <= 0;
                     if (isNew || applyToExistingImages)
