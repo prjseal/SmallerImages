@@ -48,7 +48,7 @@ namespace SmallerImages
 
             foreach (IMedia mediaItem in e.SavedEntities)
             {
-                if (!string.IsNullOrEmpty(mediaItem.ContentType.Alias) && mediaItem.ContentType.Alias.ToLower() == "image" && (resizeWidth > 0 && resizeHeight > 0))
+                if (!string.IsNullOrEmpty(mediaItem.ContentType.Alias) && mediaItem.ContentType.Alias.ToLower() == "image" && (resizeWidth > 0 || resizeHeight > 0))
                 {
                     bool isNew = mediaItem.Id <= 0;
                     if (isNew || applyToExistingImages)
@@ -59,19 +59,48 @@ namespace SmallerImages
                             double currentWidth = int.Parse(mediaItem.Properties["umbracoWidth"].Value.ToString());
                             double currentHeight = int.Parse(mediaItem.Properties["umbracoHeight"].Value.ToString());
                             Tuple<int, int> imageSize = GetCorrectWidthAndHeight(resizeWidth, resizeHeight, maintainRatio, currentWidth, currentHeight);
-                            bool isDesiredSize = (currentWidth == imageSize.Item1) && (currentHeight == imageSize.Item2);
-                            bool isLargeEnough = currentWidth >= imageSize.Item1 && currentHeight >= imageSize.Item2;
+
+                            bool isDesiredSize = (currentWidth == imageSize.Item1) && (currentHeight == imageSize.Item2);							
+
+                            bool isLargeEnough = false;
+							
+							int sendWidth = 0;
+							int sendHeight = 0;
+
+							if(resizeHeight == 0) 
+							{
+								// Width Priority
+								isLargeEnough = currentWidth >= imageSize.Item1;
+								sendWidth = imageSize.Item1;
+							}
+							else if (resizeWidth == 0) 
+							{
+								// Height Priority
+								isLargeEnough = currentHeight >= imageSize.Item2;
+								sendHeight = imageSize.Item2;
+							}
+							else if ((resizeWidth > 0) && (resizeHeight > 0))
+							{
+								// Crop Priority
+								isLargeEnough = currentWidth >= imageSize.Item1 && currentHeight >= imageSize.Item2;
+								sendWidth = imageSize.Item1;
+								sendHeight = imageSize.Item2;
+							}
 
                             if (!isDesiredSize && (isLargeEnough || upscale))
                             {
-                                if (CreateCroppedVersionOfTheFile(imageSize.Item1, imageSize.Item2, fileNameSuffix, keepOriginal, serverFilePath))
+                                if (CreateCroppedVersionOfTheFile(sendWidth, sendHeight, fileNameSuffix, keepOriginal, serverFilePath))
                                 {
                                     mediaItem.SetValue("umbracoWidth", imageSize.Item1);
                                     mediaItem.SetValue("umbracoHeight", imageSize.Item2);
                                     sender.Save(mediaItem);
                                 }
                             }
-                            CreateCroppedVersionOfTheFile(previewWidth, previewHeight, previewFileNameSuffix, true, serverFilePath);
+
+							// Only execute if previews are required
+							if((previewWidth > 0) && (previewHeight > 0) && (previewFileNameSuffix != "")) {
+								CreateCroppedVersionOfTheFile(previewWidth, previewHeight, previewFileNameSuffix, true, serverFilePath);
+							}
                         }
                     }
                 }
@@ -79,36 +108,65 @@ namespace SmallerImages
         }
 
         /// <summary>
-        /// Returns the correct width and height depending on the desired size and whether the ratio is to be maintained or not.
+        /// Returns the correct width and/or height depending on the desired size and whether the ratio is to be maintained or not.
         /// </summary>
-        /// <param name="width">Desired width</param>
-        /// <param name="height">Desired height</param>
+        /// <param name="width">Desired width (set to 0 if height more important)</param>
+        /// <param name="height">Desired height (set to 0 if width more important)</param>
         /// <param name="maintainRatio">Maintain ratio or not</param>
         /// <param name="currentWidth">Current width of the image</param>
         /// <param name="currentHeight">Current height of the image</param>
         /// <returns>The correct width and height for the new file</returns>
         private Tuple<int, int> GetCorrectWidthAndHeight(int width, int height, bool maintainRatio, double currentWidth, double currentHeight)
         {
-            int newWidth = width;
-            int newHeight = height;
+            int newWidth = 0;
+            int newHeight = 0;
+			double calcWidth = width;
+			double calcHeight = height;
+
             if (maintainRatio)
             {
                 double widthToHeightRatio = currentWidth / currentHeight;
                 bool isSquare = widthToHeightRatio == 1;
                 bool isWider = widthToHeightRatio > 1;
+				bool widthPriority = height == 0;
+				bool heightPriority = width == 0;
                 if (!isSquare && maintainRatio)
-                {
-                    if (isWider)
-                    {
-                        newWidth = (int)(newHeight * widthToHeightRatio);
-                    }
-                    else
-                    {
-                        newHeight = (int)(newWidth / widthToHeightRatio);
-                    }
-
+                {					
+					if((!widthPriority) && (!heightPriority)) 
+					{	
+						//Crop priority (width & height set > 0)
+						if (isWider)
+						{
+							calcWidth = calcHeight * widthToHeightRatio;
+							newWidth = (int)calcWidth;
+						}
+						else
+						{
+							calcHeight = calcWidth / widthToHeightRatio;
+							newHeight = (int)calcHeight;
+						}
+					}
+					else if (widthPriority)
+					{		
+						//Width priority (height = 0)
+						newWidth = width;
+						calcHeight = calcWidth / widthToHeightRatio;
+						newHeight = (int)calcHeight;
+					}
+					else if (heightPriority)
+					{			
+						//Height priority (width = 0)
+						newHeight = height;
+						calcWidth = calcHeight * widthToHeightRatio;
+						newWidth = (int)calcWidth;
+					}					
                 }
             }
+			else 
+			{
+				newWidth = width;
+				newHeight = height;
+			}
             return new Tuple<int, int>(newWidth, newHeight);
         }
 
@@ -197,9 +255,9 @@ namespace SmallerImages
             try
             {
                 imageFactory.Load(originalFilePath);
-                ResizeLayer layer = new ResizeLayer(new System.Drawing.Size(width, height), ResizeMode.Crop, AnchorPosition.Center);
-                imageFactory.Resize(layer);
-                imageFactory.AutoRotate();
+				ResizeLayer layer = new ResizeLayer(new System.Drawing.Size(width, height), ResizeMode.Crop, AnchorPosition.Center);
+				imageFactory.Resize(layer);
+				imageFactory.AutoRotate();
                 imageFactory.Save(newFilePath);
                 success = true;
             }
