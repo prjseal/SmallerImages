@@ -18,3 +18,5 @@ bin/Debug/$RANDOM_SEED$
 /SmallerImages.Web/obj
 /SmallerImages.Web/Umbraco
 /SmallerImages.Web/Umbraco_Client
+/SmallerImages/bin/Debug
+/SmallerImages/obj/Debug
