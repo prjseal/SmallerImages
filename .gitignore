@@ -8,3 +8,13 @@ bin/Debug/$RANDOM_SEED$
 /App_Data/NuGetBackup
 /bin/Release
 /packages
+/SmallerImages.Web/App_Data/Logs
+/SmallerImages.Web/App_Data/NuGetBackup
+/SmallerImages.Web/App_Data/packages/installed
+/SmallerImages.Web/App_Data/TEMP
+/SmallerImages.Web/App_Data/umbraco.config
+/SmallerImages.Web/bin
+/SmallerImages.Web/Media
+/SmallerImages.Web/obj
+/SmallerImages.Web/Umbraco
+/SmallerImages.Web/Umbraco_Client
