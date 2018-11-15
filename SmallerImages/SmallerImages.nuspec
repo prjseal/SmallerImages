@@ -9,7 +9,7 @@
     <requireLicenseAcceptance>false</requireLicenseAcceptance>
     <description>$description$</description>
     <releaseNotes>
-      - fixed bug where the image is removed and there is no file path
+      - fixed issue with generating image when preview settings not used.
     </releaseNotes>
     <copyright>$copyright$</copyright>
     <tags>SmallerImages</tags>
