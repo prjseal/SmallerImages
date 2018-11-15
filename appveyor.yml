@@ -5,6 +5,3 @@ build:
   project: SmallerImages/SmallerImages.csproj
   publish_nuget: true
   verbosity: minimal
-
-artifacts:
-  path: \SmallerImages\bin\Debug\SmallerImages.dll
