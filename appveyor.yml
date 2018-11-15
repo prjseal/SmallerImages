@@ -7,4 +7,4 @@ build:
   verbosity: minimal
 
 artifacts:
-  path: C:\projects\smallerimages\SmallerImages\bin\Debug\SmallerImages.dll
+  path: \SmallerImages\bin\Debug\SmallerImages.dll
