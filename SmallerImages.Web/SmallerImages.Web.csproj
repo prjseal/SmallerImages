@@ -277,6 +277,12 @@
     <Content Include="config\Lang\zh-CN.user.xml" />
     <Content Include="default.aspx" />
     <Content Include="Global.asax" />
+    <Content Include="Media\1001\rod-long-682636-unsplash.jpg" />
+    <Content Include="Media\1001\rod-long-682636-unsplash_preview.jpg" />
+    <Content Include="Media\1002\rod-long-682636-unsplash.jpg" />
+    <Content Include="Media\1003\testfortom.jpg" />
+    <Content Include="Media\1003\testfortom_big-thumb.jpg" />
+    <Content Include="Media\1003\testfortom_thumb.jpg" />
     <Content Include="Web.config" />
   </ItemGroup>
   <ItemGroup>
