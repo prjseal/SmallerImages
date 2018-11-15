@@ -20,3 +20,4 @@ bin/Debug/$RANDOM_SEED$
 /SmallerImages.Web/Umbraco_Client
 /SmallerImages/bin/Debug
 /SmallerImages/obj/Debug
+/SmallerImages.Web/App_Data/cache

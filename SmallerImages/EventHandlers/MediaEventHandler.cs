@@ -72,7 +72,11 @@ namespace SmallerImages.EventHandlers
                                     sender.Save(mediaItem);
                                 }
                             }
-                            CreateCroppedVersionOfTheFile(previewWidth, previewHeight, previewFileNameSuffix, true, serverFilePath);
+
+                            if(previewWidth > 0 && previewHeight > 0 && !string.IsNullOrWhiteSpace(previewFileNameSuffix))
+                            {
+                                CreateCroppedVersionOfTheFile(previewWidth, previewHeight, previewFileNameSuffix, true, serverFilePath);
+                            }
                         }
                     }
                 }
