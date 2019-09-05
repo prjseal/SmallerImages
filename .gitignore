@@ -21,3 +21,4 @@ bin/Debug/$RANDOM_SEED$
 /SmallerImages/bin/Debug
 /SmallerImages/obj/Debug
 /SmallerImages.Web/App_Data/cache
+/SmallerImages.Web/SmallerImages.Web.csproj.user
