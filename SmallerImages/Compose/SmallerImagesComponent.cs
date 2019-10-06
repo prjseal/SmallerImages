@@ -1,5 +1,4 @@
-﻿using ClientDependency.Core.Logging;
-using ImageProcessor;
+﻿using ImageProcessor;
 using ImageProcessor.Imaging;
 using Newtonsoft.Json.Linq;
 using System;
@@ -7,22 +6,26 @@ using System.Drawing;
 using System.IO;
 using System.Web;
 using System.Web.Configuration;
+using System.Web.Mvc;
 using Umbraco.Core.Composing;
 using Umbraco.Core.Events;
+using Umbraco.Core.Logging;
 using Umbraco.Core.Models;
 using Umbraco.Core.Services;
 using Umbraco.Core.Services.Implement;
+using Umbraco.Web;
 
 namespace SmallerImages.Compose
 {
     public class SmallerImagesComponent : IComponent
     {
-        private readonly ILogger _logService;
+        private ILogger _logger;
 
-        public SmallerImagesComponent(ILogger logService)
+        public SmallerImagesComponent(ILogger logger)
         {
-            _logService = logService;
+            _logger = logger;
         }
+
 
         /// <summary>
         /// Attach the MediaService_Saving event
@@ -40,6 +43,8 @@ namespace SmallerImages.Compose
         /// <param name="e">Event arguments</param>
         private void MediaService_Saving(IMediaService sender, SaveEventArgs<IMedia> e)
         {
+            var umbracoContext = DependencyResolver.Current.GetService<IUmbracoContextFactory>().EnsureUmbracoContext().UmbracoContext;
+
             int resizeWidth = int.Parse(WebConfigurationManager.AppSettings["ImageResizeWidth"] ?? "0");
             int resizeHeight = int.Parse(WebConfigurationManager.AppSettings["ImageResizeHeight"] ?? "0");
             string fileNameSuffix = WebConfigurationManager.AppSettings["ImageResizeSuffix"] ?? "";
@@ -61,28 +66,41 @@ namespace SmallerImages.Compose
                     bool isNew = mediaItem.Id <= 0;
                     if (isNew || applyToExistingImages)
                     {
-                        string serverFilePath = GetServerFilePath(mediaItem, isNew);
+                        string serverFilePath = GetServerFilePath(mediaItem, isNew, _logger);
                         if (serverFilePath != null)
                         {
-                            double currentWidth = int.Parse(mediaItem.GetValue<string>("umbracoWidth"));
-                            double currentHeight = int.Parse(mediaItem.GetValue<string>("umbracoHeight"));
-                            Tuple<int, int> imageSize = GetCorrectWidthAndHeight(resizeWidth, resizeHeight, maintainRatio, currentWidth, currentHeight);
-                            bool isDesiredSize = (currentWidth == imageSize.Item1) && (currentHeight == imageSize.Item2);
-                            bool isLargeEnough = currentWidth >= imageSize.Item1 && currentHeight >= imageSize.Item2;
-
-                            if (!isDesiredSize && (isLargeEnough || upscale))
+                            var suppressFurtherSaves = HasSuppressFile(serverFilePath);
+                            if (suppressFurtherSaves)
                             {
-                                if (CreateCroppedVersionOfTheFile(imageSize.Item1, imageSize.Item2, fileNameSuffix, keepOriginal, serverFilePath))
-                                {
-                                    mediaItem.SetValue("umbracoWidth", imageSize.Item1);
-                                    mediaItem.SetValue("umbracoHeight", imageSize.Item2);
-                                    sender.Save(mediaItem);
-                                }
+                                DeleteSuppressFile(serverFilePath);
                             }
-
-                            if (previewWidth > 0 && previewHeight > 0 && !string.IsNullOrWhiteSpace(previewFileNameSuffix))
+                            else
                             {
-                                CreateCroppedVersionOfTheFile(previewWidth, previewHeight, previewFileNameSuffix, true, serverFilePath);
+                                double currentWidth = int.Parse(mediaItem.GetValue<string>("umbracoWidth"));
+                                double currentHeight = int.Parse(mediaItem.GetValue<string>("umbracoHeight"));
+                                Tuple<int, int> imageSize = GetCorrectWidthAndHeight(resizeWidth, resizeHeight, maintainRatio, currentWidth, currentHeight);
+                                bool isDesiredSize = (currentWidth == imageSize.Item1) && (currentHeight == imageSize.Item2);
+                                bool isLargeEnough = currentWidth >= imageSize.Item1 && currentHeight >= imageSize.Item2;
+
+                                if (!isDesiredSize && (isLargeEnough || upscale))
+                                {
+                                    if (CreateCroppedVersionOfTheFile(imageSize.Item1, imageSize.Item2, fileNameSuffix, keepOriginal, serverFilePath))
+                                    {
+                                        CreateSuppressFile(serverFilePath);
+                                        mediaItem.SetValue("umbracoWidth", imageSize.Item1);
+                                        mediaItem.SetValue("umbracoHeight", imageSize.Item2);
+                                        sender.Save(mediaItem);
+                                    }
+                                }
+
+                                if (previewWidth > 0 && previewHeight > 0 && !string.IsNullOrWhiteSpace(previewFileNameSuffix))
+                                {
+                                    if (CreateCroppedVersionOfTheFile(previewWidth, previewHeight,
+                                        previewFileNameSuffix, true, serverFilePath))
+                                    {
+                                        CreateSuppressFile(serverFilePath);
+                                    }
+                                }
                             }
                         }
                     }
@@ -130,9 +148,9 @@ namespace SmallerImages.Compose
         /// <param name="mediaItem">The item to get the path from</param>
         /// <param name="isNew">Is this a new file or an existing one?</param>
         /// <returns>The path of the file on the server</returns>
-        private static string GetServerFilePath(IMedia mediaItem, bool isNew)
+        private static string GetServerFilePath(IMedia mediaItem, bool isNew, ILogger logger)
         {
-            var filePath = mediaItem.GetValue<string>("umbracoFile");
+            var filePath = mediaItem.GetUrl("umbracoFile", logger);
             if (filePath != null)
             {
                 if (!filePath.StartsWith("/media/"))
@@ -154,9 +172,9 @@ namespace SmallerImages.Compose
         /// <returns>A string for the path of the file</returns>
         private static string GetFilePathFromJson(string filePath)
         {
-            var jsonFileDetails = JObject.Parse(filePath);
-            string src = jsonFileDetails["src"].ToString();
-            filePath = src;
+            //var jsonFileDetails = JObject.Parse(filePath);
+            //string src = jsonFileDetails["src"].ToString();
+            //filePath = src;
             return filePath;
         }
 
@@ -192,6 +210,57 @@ namespace SmallerImages.Compose
                 }
             }
             return success;
+        }
+
+        /// <summary>
+        /// This creates a text file called suppress.txt which indicates that we should not attempt
+        /// to resize the image again to prevent an endless loop.
+        /// </summary>
+        /// <param name="imageFilePath"></param>
+        /// <returns></returns>
+        private bool CreateSuppressFile(string imageFilePath)
+        {
+            try
+            {
+                FileInfo fileInfo = new FileInfo(imageFilePath);
+                var folderPath = fileInfo.DirectoryName;
+                var filePath = Path.Combine(folderPath, "suppress.txt");
+                using (var sw = new StreamWriter(System.IO.File.Create(filePath)))
+                {
+
+                }
+                return true;
+            }
+            catch (Exception e)
+            {
+                return false;
+            }
+        }
+
+        /// <summary>
+        /// This method deletes the suppress.txt file in the folder of the file path provided.
+        /// </summary>
+        /// <param name="imageFilePath">The path of the image being resized</param>
+        /// <returns></returns>
+        private bool DeleteSuppressFile(string imageFilePath)
+        {
+            FileInfo fileInfo = new FileInfo(imageFilePath);
+            var folderPath = fileInfo.DirectoryName;
+            var filePath = Path.Combine(folderPath, "suppress.txt");
+            return DeleteFile(filePath);
+        }
+
+        /// <summary>
+        /// Checks if the suppress.txt file exists in the folder where the image is.
+        /// </summary>
+        /// <param name="imageFilePath"></param>
+        /// <returns></returns>
+        private bool HasSuppressFile(string imageFilePath)
+        {
+            FileInfo fileInfo = new FileInfo(imageFilePath);
+            var folderPath = fileInfo.DirectoryName;
+            var suppressFilePath = Path.Combine(folderPath, "suppress.txt");
+            return System.IO.File.Exists(suppressFilePath);
         }
 
         /// <summary>
@@ -231,6 +300,7 @@ namespace SmallerImages.Compose
         /// </summary>
         /// <param name="filePath">The full path of the original file</param>
         /// <param name="fileNameSuffix">The suffix to be used at the end of the file name in the new file path</param>
+        /// <param name="folderPath">An out variable to return the folder path</param></para>
         /// <returns>The new file path</returns>
         public string GetNewFilePath(string filePath, string fileNameSuffix)
         {
@@ -258,7 +328,7 @@ namespace SmallerImages.Compose
                 }
                 success = true;
             }
-            catch (System.Exception)
+            catch (System.Exception ex)
             {
                 success = false;
             }
