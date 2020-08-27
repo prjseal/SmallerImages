@@ -1,0 +1,20 @@
+<?xml version="1.0"?>
+<package >
+  <metadata>
+    <id>$id$</id>
+    <version>$version$</version>
+    <title>$title$</title>
+    <authors>Paul Seal</authors>
+    <owners>Paul Seal</owners>
+    <license type="expression">MIT</license>
+    <projectUrl>https://github.com/prjseal/SmallerImages/</projectUrl>
+    <iconUrl>https://codeshare.co.uk/media/5wkltyfn/smaller-images-logo.jpg</iconUrl>
+    <requireLicenseAcceptance>false</requireLicenseAcceptance>
+    <description>$description$</description>
+    <releaseNotes>
+      - first release for Umbraco v8
+    </releaseNotes>
+    <copyright>$copyright$</copyright>
+    <tags>SmallerImages,Smaller,Images,umbraco,resize</tags>
+  </metadata>
+</package>

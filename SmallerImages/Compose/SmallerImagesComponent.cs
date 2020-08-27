@@ -1,6 +1,5 @@
 ﻿using ImageProcessor;
 using ImageProcessor.Imaging;
-using Newtonsoft.Json.Linq;
 using System;
 using System.Drawing;
 using System.IO;
@@ -69,38 +68,26 @@ namespace SmallerImages.Compose
                         string serverFilePath = GetServerFilePath(mediaItem, isNew, _logger);
                         if (serverFilePath != null)
                         {
-                            var suppressFurtherSaves = HasSuppressFile(serverFilePath);
-                            if (suppressFurtherSaves)
+                            double currentWidth = int.Parse(mediaItem.GetValue<string>("umbracoWidth"));
+                            double currentHeight = int.Parse(mediaItem.GetValue<string>("umbracoHeight"));
+                            Tuple<int, int> imageSize = GetCorrectWidthAndHeight(resizeWidth, resizeHeight, maintainRatio, currentWidth, currentHeight);
+                            bool isDesiredSize = (currentWidth == imageSize.Item1) && (currentHeight == imageSize.Item2);
+                            bool isLargeEnough = currentWidth >= imageSize.Item1 && currentHeight >= imageSize.Item2;
+
+                            if (!isDesiredSize && (isLargeEnough || upscale))
                             {
-                                DeleteSuppressFile(serverFilePath);
+                                if (CreateCroppedVersionOfTheFile(imageSize.Item1, imageSize.Item2, fileNameSuffix, keepOriginal, serverFilePath))
+                                {
+                                    mediaItem.SetValue("umbracoWidth", imageSize.Item1);
+                                    mediaItem.SetValue("umbracoHeight", imageSize.Item2);
+                                    sender.Save(mediaItem, raiseEvents: false);
+                                }
                             }
-                            else
+
+                            if (previewWidth > 0 && previewHeight > 0 && !string.IsNullOrWhiteSpace(previewFileNameSuffix))
                             {
-                                double currentWidth = int.Parse(mediaItem.GetValue<string>("umbracoWidth"));
-                                double currentHeight = int.Parse(mediaItem.GetValue<string>("umbracoHeight"));
-                                Tuple<int, int> imageSize = GetCorrectWidthAndHeight(resizeWidth, resizeHeight, maintainRatio, currentWidth, currentHeight);
-                                bool isDesiredSize = (currentWidth == imageSize.Item1) && (currentHeight == imageSize.Item2);
-                                bool isLargeEnough = currentWidth >= imageSize.Item1 && currentHeight >= imageSize.Item2;
-
-                                if (!isDesiredSize && (isLargeEnough || upscale))
-                                {
-                                    if (CreateCroppedVersionOfTheFile(imageSize.Item1, imageSize.Item2, fileNameSuffix, keepOriginal, serverFilePath))
-                                    {
-                                        CreateSuppressFile(serverFilePath);
-                                        mediaItem.SetValue("umbracoWidth", imageSize.Item1);
-                                        mediaItem.SetValue("umbracoHeight", imageSize.Item2);
-                                        sender.Save(mediaItem);
-                                    }
-                                }
-
-                                if (previewWidth > 0 && previewHeight > 0 && !string.IsNullOrWhiteSpace(previewFileNameSuffix))
-                                {
-                                    if (CreateCroppedVersionOfTheFile(previewWidth, previewHeight,
-                                        previewFileNameSuffix, true, serverFilePath))
-                                    {
-                                        CreateSuppressFile(serverFilePath);
-                                    }
-                                }
+                                CreateCroppedVersionOfTheFile(previewWidth, previewHeight,
+                                    previewFileNameSuffix, true, serverFilePath);
                             }
                         }
                     }
@@ -210,57 +197,6 @@ namespace SmallerImages.Compose
                 }
             }
             return success;
-        }
-
-        /// <summary>
-        /// This creates a text file called suppress.txt which indicates that we should not attempt
-        /// to resize the image again to prevent an endless loop.
-        /// </summary>
-        /// <param name="imageFilePath"></param>
-        /// <returns></returns>
-        private bool CreateSuppressFile(string imageFilePath)
-        {
-            try
-            {
-                FileInfo fileInfo = new FileInfo(imageFilePath);
-                var folderPath = fileInfo.DirectoryName;
-                var filePath = Path.Combine(folderPath, "suppress.txt");
-                using (var sw = new StreamWriter(System.IO.File.Create(filePath)))
-                {
-
-                }
-                return true;
-            }
-            catch (Exception e)
-            {
-                return false;
-            }
-        }
-
-        /// <summary>
-        /// This method deletes the suppress.txt file in the folder of the file path provided.
-        /// </summary>
-        /// <param name="imageFilePath">The path of the image being resized</param>
-        /// <returns></returns>
-        private bool DeleteSuppressFile(string imageFilePath)
-        {
-            FileInfo fileInfo = new FileInfo(imageFilePath);
-            var folderPath = fileInfo.DirectoryName;
-            var filePath = Path.Combine(folderPath, "suppress.txt");
-            return DeleteFile(filePath);
-        }
-
-        /// <summary>
-        /// Checks if the suppress.txt file exists in the folder where the image is.
-        /// </summary>
-        /// <param name="imageFilePath"></param>
-        /// <returns></returns>
-        private bool HasSuppressFile(string imageFilePath)
-        {
-            FileInfo fileInfo = new FileInfo(imageFilePath);
-            var folderPath = fileInfo.DirectoryName;
-            var suppressFilePath = Path.Combine(folderPath, "suppress.txt");
-            return System.IO.File.Exists(suppressFilePath);
         }
 
         /// <summary>
